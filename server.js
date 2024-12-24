@@ -22,7 +22,18 @@ const pool = require("./config/db");
 const app = express();
 
 // Middleware
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "plants-gamma.vercel.app",
+      "plants-b11hy497n-guest-user-1s-projects.vercel.app",
+    ], // Allow local and production frontEnd URLs
+    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed HTTP methods
+    credentials: true, // Allow cookies and other credentials
+  })
+);
 app.use(express.json());
 
 // Serve static files from the "uploads" directory
