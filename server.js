@@ -29,6 +29,8 @@ app.use(
       "http://localhost:5173",
       "https://plants-gamma.vercel.app",
       "https://plants-b11hy497n-guest-user-1s-projects.vercel.app",
+      "https://plants-guest-user-1s-projects.vercel.app",
+      "https://plants-mwh416hte-guest-user-1s-projects.vercel.app",
     ], // Allow local and production frontEnd URLs
     methods: ["GET", "POST", "PUT", "DELETE"], // Allowed HTTP methods
     credentials: true, // Allow cookies and other credentials
