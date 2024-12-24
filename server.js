@@ -27,8 +27,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "plants-gamma.vercel.app",
-      "plants-b11hy497n-guest-user-1s-projects.vercel.app",
+      "https://plants-gamma.vercel.app",
+      "https://plants-b11hy497n-guest-user-1s-projects.vercel.app",
     ], // Allow local and production frontEnd URLs
     methods: ["GET", "POST", "PUT", "DELETE"], // Allowed HTTP methods
     credentials: true, // Allow cookies and other credentials
