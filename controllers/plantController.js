@@ -139,11 +139,11 @@ exports.updatePlant = async (req, res) => {
 
     const currentImage = existingPlantResult.rows[0].plant_image;
 
-    // If a new image is uploaded, remove the old image (if necessary) and update with the new image
-    if (plantImage && currentImage) {
-      // Add logic to remove the previous image if stored elsewhere (e.g., file system or cloud storage)
-      // For PostgreSQL, old images are replaced automatically when the column is updated
-    }
+    // // If a new image is uploaded, remove the old image (if necessary) and update with the new image
+    // if (plantImage && currentImage) {
+    //   // Add logic to remove the previous image if stored elsewhere (e.g., file system or cloud storage)
+    //   // For PostgreSQL, old images are replaced automatically when the column is updated
+    // }
 
     const updateQuery = `
       UPDATE plants
