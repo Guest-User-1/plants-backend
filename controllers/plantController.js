@@ -129,6 +129,22 @@ exports.updatePlant = async (req, res) => {
     // Handle image as binary data
     const plantImage = req.file ? req.file.buffer : null;
 
+    // Fetch the current image
+    const existingPlantQuery = "SELECT plant_image FROM plants WHERE id = $1";
+    const existingPlantResult = await pool.query(existingPlantQuery, [id]);
+
+    if (existingPlantResult.rows.length === 0) {
+      return res.status(404).json({ message: "Plant not found" });
+    }
+
+    const currentImage = existingPlantResult.rows[0].plant_image;
+
+    // If a new image is uploaded, remove the old image (if necessary) and update with the new image
+    if (plantImage && currentImage) {
+      // Add logic to remove the previous image if stored elsewhere (e.g., file system or cloud storage)
+      // For PostgreSQL, old images are replaced automatically when the column is updated
+    }
+
     const updateQuery = `
       UPDATE plants
       SET 
@@ -182,6 +198,7 @@ exports.updatePlant = async (req, res) => {
     res.status(500).json({ message: "Failed to update plant" });
   }
 };
+
 
 exports.deletePlant = async (req, res) => {
   try {
