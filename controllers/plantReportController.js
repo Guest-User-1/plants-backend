@@ -173,38 +173,89 @@ const getPlantDateRecord = async (req, res) => {
   }
 };
 
+// const getPlantDetailsWithLastReport = async (req, res) => {
+//   try {
+//     const query = `
+//       SELECT
+//           p.id AS plant_id,
+//           p.plant_name,
+//           p.plant_number,
+//           p.plant_zone,
+//           p.health_status,
+//           p.latitude,
+//           p.longitude,
+//           p.height,
+//           p.stump,
+//           p.girth,
+//           p.plant_image,
+//           p.upload_date,
+//           p.updated_time,
+//           pr.report_date AS last_reported_date
+//       FROM
+//           plants p
+//       LEFT JOIN
+//           plant_reports pr
+//       ON
+//           p.plant_number = pr.plant_number AND p.plant_zone = pr.plant_zone
+//       WHERE
+//           pr.report_date = (
+//               SELECT MAX(report_date)
+//               FROM plant_reports
+//               WHERE
+//                   plant_reports.plant_number = p.plant_number
+//                   AND plant_reports.plant_zone = p.plant_zone
+//           )
+//       OR pr.report_date IS NULL;
+//     `;
+
+//     const result = await pool.query(query);
+
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({ message: "No plant details found!" });
+//     }
+
+//     res.status(200).json(result.rows);
+//   } catch (err) {
+//     console.error(err);
+//     res
+//       .status(500)
+//       .json({ message: "Error fetching plant details", error: err.message });
+//   }
+// };
+
+// Update super admin comment for a specific report
 const getPlantDetailsWithLastReport = async (req, res) => {
   try {
     const query = `
       SELECT 
-          p.id AS plant_id,
-          p.plant_name,
-          p.plant_number,
-          p.plant_zone,
-          p.health_status,
-          p.latitude,
-          p.longitude,
-          p.height,
-          p.stump,
-          p.girth,
-          p.plant_image,
-          p.upload_date,
-          p.updated_time,
-          pr.report_date AS last_reported_date
+        p.id AS plant_id,
+        p.plant_name,
+        p.plant_number,
+        p.plant_zone,
+        p.health_status,
+        p.latitude,
+        p.longitude,
+        p.height,
+        p.stump,
+        p.girth,
+        p.plant_image,
+        p.upload_date,
+        p.updated_time,
+        pr.report_date AS last_reported_date
       FROM 
-          plants p
+        plants p
       LEFT JOIN 
-          plant_reports pr
+        plant_reports pr
       ON 
-          p.plant_number = pr.plant_number AND p.plant_zone = pr.plant_zone
+        p.plant_number = pr.plant_number AND p.plant_zone = pr.plant_zone
       WHERE 
-          pr.report_date = (
-              SELECT MAX(report_date) 
-              FROM plant_reports 
-              WHERE 
-                  plant_reports.plant_number = p.plant_number 
-                  AND plant_reports.plant_zone = p.plant_zone
-          )
+        pr.report_date = (
+          SELECT MAX(report_date)
+          FROM plant_reports
+          WHERE
+            plant_reports.plant_number = p.plant_number
+            AND plant_reports.plant_zone = p.plant_zone
+        )
       OR pr.report_date IS NULL;
     `;
 
@@ -214,16 +265,50 @@ const getPlantDetailsWithLastReport = async (req, res) => {
       return res.status(404).json({ message: "No plant details found!" });
     }
 
-    res.status(200).json(result.rows);
+    // Transform the rows to include proper image data URLs
+    const transformedRows = result.rows.map((row) => {
+      try {
+        if (!row.plant_image) {
+          return { ...row, plant_image: null };
+        }
+
+        // Check if the image is already a Buffer
+        const imageBuffer = Buffer.isBuffer(row.plant_image)
+          ? row.plant_image
+          : Buffer.from(row.plant_image);
+
+        // Detect image type from buffer header
+        let mimeType = "image/jpeg"; // default
+        if (imageBuffer[0] === 0x89 && imageBuffer[1] === 0x50) {
+          mimeType = "image/png";
+        }
+
+        // Convert buffer to base64 and create data URL
+        const base64Image = imageBuffer.toString("base64");
+
+        return {
+          ...row,
+          plant_image: `data:${mimeType};base64,${base64Image}`,
+        };
+      } catch (error) {
+        console.error(
+          `Error processing image for plant ${row.plant_number}:`,
+          error
+        );
+        return { ...row, plant_image: null };
+      }
+    });
+
+    res.status(200).json(transformedRows);
   } catch (err) {
-    console.error(err);
-    res
-      .status(500)
-      .json({ message: "Error fetching plant details", error: err.message });
+    console.error("Error in getPlantDetailsWithLastReport:", err);
+    res.status(500).json({
+      message: "Error fetching plant details",
+      error: err.message,
+    });
   }
 };
 
-// Update super admin comment for a specific report
 const updateSuperAdminComment = async (req, res) => {
   const { id } = req.params; // Report ID from route parameters
   const { comment } = req.body; // New comment from request body
