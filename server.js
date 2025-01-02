@@ -40,7 +40,10 @@ app.use(express.json());
 
 // Serve static files from the "uploads" directory
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
+// Serve static files for the React app in production
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "client/build")));
+}
 // Routes
 app.use("/", authRoutes);
 app.use("/plants", plantRoutes);
@@ -48,7 +51,12 @@ app.use("/attendance", attendanceRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/questions", questionRoutes);
 app.use("/plant-report", plantReportRoutes);
-
+// Redirect all unknown paths to index.html in production
+if (process.env.NODE_ENV === "production") {
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "client/build", "index.html"));
+  });
+}
 // Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
