@@ -106,7 +106,11 @@ exports.getPlantDetails = async (req, res) => {
 };
 
 exports.updatePlant = async (req, res) => {
+  const client = await pool.connect();
+
   try {
+    await client.query("BEGIN");
+
     const {
       id,
       plant_name,
@@ -126,31 +130,39 @@ exports.updatePlant = async (req, res) => {
       : {};
     const { full_name, zone, vibhaag } = updatedBy;
 
-    // Handle image upload in different scenarios
+    // First check if plant exists
+    const checkPlant = await client.query(
+      "SELECT id FROM plants WHERE plant_number = $1 AND plant_zone = $2",
+      [plant_number, plant_zone]
+    );
+
+    if (checkPlant.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Plant not found" });
+    }
+
+    // Handle image processing
     let plantImage = null;
+    let imageUpdateClause = "";
+    let imageParam = null;
 
     if (req.file) {
-      // If a new file is uploaded via multer
+      // New file uploaded via multer
       plantImage = req.file.buffer;
+      imageUpdateClause = ", plant_image = $16";
+      imageParam = plantImage;
     } else if (
       req.body.plant_image &&
       req.body.plant_image.startsWith("data:image")
     ) {
-      // If image is sent as base64 data URL
-      const base64Image = req.body.plant_image.split(";base64,").pop();
-      plantImage = Buffer.from(base64Image, "base64");
+      // Base64 image data
+      const base64Data = req.body.plant_image.split(";base64,").pop();
+      plantImage = Buffer.from(base64Data, "base64");
+      imageUpdateClause = ", plant_image = $16";
+      imageParam = plantImage;
     }
 
-    // Fetch the current plant to check if it exists
-    const existingPlantQuery =
-      "SELECT id, plant_image FROM plants WHERE id = $1";
-    const existingPlantResult = await pool.query(existingPlantQuery, [id]);
-
-    if (existingPlantResult.rows.length === 0) {
-      return res.status(404).json({ message: "Plant not found" });
-    }
-
-    // Construct update query
+    // Construct dynamic update query
     const updateQuery = `
       UPDATE plants
       SET 
@@ -164,18 +176,17 @@ exports.updatePlant = async (req, res) => {
         latitude = $8,
         longitude = $9,
         health_status = $10,
-        plant_image = COALESCE($11, plant_image),
-        updated_by_full_name = $12,
-        updated_by_zone = $13,
-        updated_by_vibhaag = $14,
+        updated_by_full_name = $11,
+        updated_by_zone = $12,
+        updated_by_vibhaag = $13,
         updated_time = NOW()
-      WHERE id = $15
-      RETURNING id, plant_name, plant_number, plant_zone, height, stump, girth, 
-                planted_on, latitude, longitude, health_status, 
-                updated_by_full_name, updated_by_zone, updated_by_vibhaag, updated_time;
+        ${imageUpdateClause}
+      WHERE id = $14 AND plant_zone = $15
+      RETURNING *;
     `;
 
-    const result = await pool.query(updateQuery, [
+    // Create params array based on whether we're updating the image
+    const params = [
       plant_name,
       plant_number,
       plant_zone,
@@ -186,26 +197,40 @@ exports.updatePlant = async (req, res) => {
       latitude,
       longitude,
       health_status,
-      plantImage,
       full_name,
       zone,
       vibhaag,
       id,
-    ]);
+      plant_zone,
+    ];
 
-    if (result.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "Plant not found or no changes made" });
+    if (imageParam) {
+      params.push(imageParam);
     }
 
-    res.status(200).json(result.rows[0]);
+    const result = await client.query(updateQuery, params);
+
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res
+        .status(404)
+        .json({ message: "Plant not found or update failed" });
+    }
+
+    await client.query("COMMIT");
+
+    // Don't send the image data back in the response
+    const { plant_image, ...plantData } = result.rows[0];
+    res.status(200).json(plantData);
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error updating plant:", error);
     res.status(500).json({
       message: "Failed to update plant",
       error: error.message,
     });
+  } finally {
+    client.release();
   }
 };
 exports.deletePlant = async (req, res) => {
