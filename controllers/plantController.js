@@ -367,7 +367,7 @@ exports.deletePlantByZone = async (req, res) => {
 exports.getAllPlants = async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, plant_name, plant_number, plant_zone, height, stump, girth, planted_on, latitude, longitude, health_status, plant_image FROM plants"
+      "SELECT id, plant_name, plant_number, plant_zone, height, stump, girth, planted_on, latitude, longitude, health_status, plant_image, registered_by, registered_by_full_name, registered_by_zone, registered_by_vibhaag, upload_date, updated_by_full_name, updated_by_zone, updated_by_vibhaag, updated_time FROM plants"
     );
 
     // Convert binary image data to base64 for all plants
