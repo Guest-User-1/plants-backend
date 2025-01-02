@@ -105,6 +105,83 @@ exports.getPlantDetails = async (req, res) => {
   }
 };
 
+// exports.updatePlant = async (req, res) => {
+//   try {
+//     const {
+//       id,
+//       plant_name,
+//       plant_number,
+//       plant_zone,
+//       height,
+//       stump,
+//       girth,
+//       planted_on,
+//       latitude,
+//       longitude,
+//       health_status,
+//     } = req.body;
+
+//     const updatedBy = req.body.updated_by
+//       ? JSON.parse(req.body.updated_by)
+//       : {};
+//     const { full_name, zone, vibhaag } = updatedBy;
+
+//     // Handle image as binary data
+//     const plantImage = req.file ? req.file.buffer : null;
+
+//     const updateQuery = `
+//       UPDATE plants
+//       SET
+//         plant_name = $1,
+//         plant_number = $2,
+//         plant_zone = $3,
+//         height = $4,
+//         stump = $5,
+//         girth = $6,
+//         planted_on = $7,
+//         latitude = $8,
+//         longitude = $9,
+//         health_status = $10,
+//         plant_image = COALESCE($11, plant_image),
+//         updated_by_full_name = $12,
+//         updated_by_zone = $13,
+//         updated_by_vibhaag = $14,
+//         updated_time = NOW()
+//       WHERE id = $15
+//       RETURNING id, plant_name, plant_number, plant_zone, height, stump, girth, planted_on, latitude, longitude,
+//                 health_status, updated_by_full_name, updated_by_zone, updated_by_vibhaag, updated_time;
+//     `;
+
+//     const result = await pool.query(updateQuery, [
+//       plant_name,
+//       plant_number,
+//       plant_zone,
+//       height,
+//       stump,
+//       girth,
+//       planted_on,
+//       latitude,
+//       longitude,
+//       health_status,
+//       plantImage,
+//       full_name,
+//       zone,
+//       vibhaag,
+//       id,
+//     ]);
+
+//     if (result.rows.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: "Plant not found or no changes made" });
+//     }
+
+//     res.status(200).json(result.rows[0]);
+//   } catch (error) {
+//     console.error("Error updating plant:", error);
+//     res.status(500).json({ message: "Failed to update plant" });
+//   }
+// };
 exports.updatePlant = async (req, res) => {
   try {
     const {
@@ -127,7 +204,12 @@ exports.updatePlant = async (req, res) => {
     const { full_name, zone, vibhaag } = updatedBy;
 
     // Handle image as binary data
-    const plantImage = req.file ? req.file.buffer : null;
+    // Extract Base64 image data (assuming plantImage is a DataURL)
+    let plantImage = null;
+    if (req.body.plant_image) {
+      const base64Image = req.body.plant_image.split(",")[1];
+      plantImage = Buffer.from(base64Image, "base64"); // Decode Base64 string
+    }
 
     // Fetch the current image
     const existingPlantQuery = "SELECT plant_image FROM plants WHERE id = $1";
@@ -190,7 +272,6 @@ exports.updatePlant = async (req, res) => {
     res.status(500).json({ message: "Failed to update plant" });
   }
 };
-
 
 exports.deletePlant = async (req, res) => {
   try {
